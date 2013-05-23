@@ -77,6 +77,52 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AzureAction.cs" />
+    <Compile Include="AzureAuthentication.cs" />
+    <Compile Include="AzureConfigurer.cs" />
+    <Compile Include="AzureConfigurerEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AzureResponse.cs" />
+    <Compile Include="Compute\AzureActionWithConfigBase.cs" />
+    <Compile Include="Compute\AzureActionWithConfigBaseEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\AzureComputeActionBase.cs" />
+    <Compile Include="Compute\AzureComputeActionBaseEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\AzureRole.cs" />
+    <Compile Include="Compute\AzureSite.cs" />
+    <Compile Include="Compute\ChangeDeploymentConfigurationAction.cs" />
+    <Compile Include="Compute\ChangeDeploymentConfigurationActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\CreateHostedServiceAction.cs" />
+    <Compile Include="Compute\CreateHostedServiceActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\DeleteDeploymentAction.cs" />
+    <Compile Include="Compute\DeleteDeploymentActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\DeleteHostedServiceAction.cs" />
+    <Compile Include="Compute\DeleteHostedServiceActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\DeployPackageAction.cs" />
+    <Compile Include="Compute\DeployPackageActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\PackageAction.cs" />
+    <Compile Include="Compute\PackageActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Compute\SwapDeploymentAction.cs" />
+    <Compile Include="Compute\SwapDeploymentActionEditor.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\UploadFilesToBlobStorageAction.cs" />
     <Compile Include="Storage\UploadFilesToBlobStorageActionEditor.cs">
@@ -88,9 +134,7 @@
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Compute\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

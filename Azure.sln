@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure", "Azure.csproj", "{9441474E-CF78-4078-B3A7-60E4A3FA9522}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Tests", "Azure.Tests\Azure.Tests.csproj", "{61F25208-FCD1-4610-ACD7-6E5AD261725F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,12 +19,6 @@ Global
 		{9441474E-CF78-4078-B3A7-60E4A3FA9522}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9441474E-CF78-4078-B3A7-60E4A3FA9522}.Release|x86.ActiveCfg = Release|x86
 		{9441474E-CF78-4078-B3A7-60E4A3FA9522}.Release|x86.Build.0 = Release|x86
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{61F25208-FCD1-4610-ACD7-6E5AD261725F}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

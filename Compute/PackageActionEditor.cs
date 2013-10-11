@@ -39,10 +39,10 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.EnsureChildControls();
 
             var action = (PackageAction)extension;
-            this.ffpServiceDefinition.ServerId = action.ServerId;
+            this.ffpServiceDefinition.ServerId = this.ServerId;
             this.ffpServiceDefinition.Text = action.ServiceDefinition;
             this.txtWebRoleName.Text = action.WebRole.RoleName;
-            this.ffpWebRoleBinDir.ServerId = action.ServerId;
+            this.ffpWebRoleBinDir.ServerId = this.ServerId;
             this.ffpWebRoleBinDir.Text = action.WebRole.RoleBinDirectory;
             this.txtWebRoleAssemblyName.Text = action.WebRole.RoleAssemblyName;
             this.txtWebRoleSiteRoleName.Text = action.WebRoleSite.RoleName;

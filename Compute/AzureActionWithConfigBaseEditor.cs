@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-//using System.Linq;
 using System.Text;
-
 using System.Web.UI.WebControls;
 using Inedo.BuildMaster.Data;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web.Controls;
 using Inedo.BuildMaster.Web.Controls.Extensions;
 using Inedo.Web.Controls;
-using Inedo.BuildMaster.Features;
-using Inedo.Linq;
+using System.Linq;
 using System.Data;
 
 namespace Inedo.BuildMasterExtensions.Azure
@@ -93,7 +90,6 @@ namespace Inedo.BuildMasterExtensions.Azure
 
             //ddlInstance
             ddlInstance = new DropDownList { ID = "ddlInstance", Width = 300 };
-            this.PreRender += (_s, _e) => { CUtil.GetJQuery(Page).IncludeInedoDefaulter = true; };
             this.txtConfigurationFileName = new ValidatingTextBox { Width = 300, Required = true };
             this.txtInstanceName = new ValidatingTextBox { Width = 300, Required = true };
 

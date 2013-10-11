@@ -14,7 +14,7 @@ using Inedo.BuildMaster.Extensibility.Agents;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public abstract class AzureAction : CommandLineActionBase  
+    public abstract class AzureAction : RemoteActionBase  
     {
         internal protected enum RequestType { Get, Post, Delete };
 
@@ -27,11 +27,9 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         protected AzureConfigurer Configurer
         {
-            get {
-                if (null != TestConfigurer)
-                    return TestConfigurer;
-                else
-                    return Util.Actions.GetConfigurer(GetType()) as AzureConfigurer; 
+            get
+            {
+                return this.GetExtensionConfigurer() as AzureConfigurer;
             }
         }
 
@@ -48,12 +46,12 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         protected string ResolveDirectory(string FilePath)
         {
-            if (null != this.TestConfigurer)
-                return FilePath;
-            using (var sourceAgent = (IFileOperationsExecuter)Util.Agents.CreateAgentFromId(1))
+            using (var sourceAgent2 = Util.Agents.CreateLocalAgent())
             {
+                var sourceAgent = sourceAgent2.GetService<IFileOperationsExecuter>();
+
                 char srcSeparator = sourceAgent.GetDirectorySeparator();
-                var srcPath = sourceAgent.GetWorkingDirectory(this.Context.ApplicationId, this.Context.DeployableId, FilePath);
+                var srcPath = sourceAgent.GetWorkingDirectory(this.Context.ApplicationId, this.Context.DeployableId ?? 0, FilePath);
 
                 LogInformation("Source Path: " + srcPath);
                 return srcPath;

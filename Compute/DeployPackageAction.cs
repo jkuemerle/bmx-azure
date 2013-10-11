@@ -4,13 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.IO;
-
 using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
-
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
@@ -132,10 +131,10 @@ namespace Inedo.BuildMasterExtensions.Azure
             bool retVal = false;
             try
             {
-                var account = new CloudStorageAccount(new StorageCredentialsAccountAndKey(this.StorageAccountName, this.StorageAccessKey), true);
+                var account = new CloudStorageAccount(new StorageCredentials(this.StorageAccountName, this.StorageAccessKey), true);
                 var blobClient = account.CreateCloudBlobClient();
                 var container = blobClient.GetContainerReference(BlobContainer);
-                container.CreateIfNotExist(); 
+                container.CreateIfNotExists(); 
                 string package = this.ResolveDirectory(this.PackageFile);
                 if (!File.Exists(package))
                 {
@@ -143,8 +142,8 @@ namespace Inedo.BuildMasterExtensions.Azure
                     return false;
                 }
                 var blobFileName = Path.GetFileNameWithoutExtension(package) + Guid.NewGuid().ToString() + (Path.HasExtension(package) ? Path.GetExtension(package) : "");
-                var blob = container.GetBlobReference(blobFileName);
-                blob.UploadFile(package);
+                var blob = container.GetBlobReferenceFromServer(blobFileName);
+                blob.UploadFromFile(package, FileMode.Open);
                 this.blobFileUri = blob.Uri;
                 return true;
             }
@@ -161,11 +160,11 @@ namespace Inedo.BuildMasterExtensions.Azure
             bool retVal = false;
             try
             {
-                var account = new CloudStorageAccount(new StorageCredentialsAccountAndKey(this.StorageAccountName, this.StorageAccessKey), true);
+                var account = new CloudStorageAccount(new StorageCredentials(this.StorageAccountName, this.StorageAccessKey), true);
                 var blobClient = account.CreateCloudBlobClient();
                 var container = blobClient.GetContainerReference(BlobContainer);
-                container.CreateIfNotExist();
-                var blob = container.GetBlobReference(this.blobFileUri.ToString());
+                container.CreateIfNotExists();
+                var blob = container.GetBlobReferenceFromServer(this.blobFileUri.ToString());
                 if (null != blob)
                 {
                     blob.Delete();

@@ -4,10 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.IO;
-
 using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
-
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;

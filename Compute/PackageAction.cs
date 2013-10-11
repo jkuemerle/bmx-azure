@@ -83,17 +83,15 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         protected override string ProcessRemoteCommand(string name, string[] args)
         {
-            string workingDir = ".";
-            if (null != RemoteConfiguration)
-                workingDir = RemoteConfiguration.SourceDirectory;
+            string workingDir = this.Context.SourceDirectory;
             string cmdLine = BuildCommand();
             string p = BuildParameters();
             LogInformation("Ready to run command line {0} with parameters {1}", cmdLine, p);
-            string exitcode = ExecuteCommandLine(cmdLine, p, workingDir);
+            int exitcode = ExecuteCommandLine(cmdLine, p, workingDir);
             LogInformation("Result of command line: {0}", exitcode);
-            if(0 != int.Parse(exitcode)) 
+            if(0 != exitcode) 
                 LogError("Error creating Azure package. Error Code: {0}",exitcode);
-            return exitcode;
+            return exitcode.ToString();
         }
 
         internal string ParseServiceDefinition(string PathToParse)

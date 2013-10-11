@@ -6,7 +6,8 @@ using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Files;
 using Inedo.BuildMaster.Web;
 using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
 
 namespace Inedo.BuildMasterExtensions.Azure.Storage
 {
@@ -59,14 +60,14 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
             var entryResults = Util.Files.GetDirectoryEntry(
                 new GetDirectoryEntryCommand
                 {
-                    Path = this.RemoteConfiguration.SourceDirectory,
+                    Path = this.Context.SourceDirectory,
                     IncludeRootPath = true,
                     Recurse = this.Recursive
                 }
             );
 
             var matches = Util.Files.Comparison.GetMatches(
-                this.RemoteConfiguration.SourceDirectory,
+                this.Context.SourceDirectory,
                 entryResults.Entry,
                 this.FileMasks
             ).OfType<FileEntryInfo>().ToList();
@@ -80,12 +81,12 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
             this.LogDebug("Mask matched {0} file(s).", matches.Count);
 
             this.LogInformation("Contacting Windows Azure Storage Service...");
-            var account = new CloudStorageAccount(new StorageCredentialsAccountAndKey(this.AccountName, this.AccessKey), true);
+            var account = new CloudStorageAccount(new StorageCredentials(this.AccountName, this.AccessKey), true);
             var blobClient = account.CreateCloudBlobClient();
 
             this.LogDebug("Getting container {0}...", this.Container);
             var container = blobClient.GetContainerReference(this.Container);
-            if (container.CreateIfNotExist())
+            if (container.CreateIfNotExists())
                 this.LogDebug("Container created.");
             else
                 this.LogDebug("Container found.");
@@ -97,12 +98,12 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
             this.LogDebug("Uploading to {0}...", targetFolder);
             foreach (var fileInfo in matches)
             {
-                var fileName = targetFolder + fileInfo.Path.Substring(this.RemoteConfiguration.SourceDirectory.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
+                var fileName = targetFolder + fileInfo.Path.Substring(this.Context.SourceDirectory.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
                 this.LogInformation("Transferring {0} to {1}...", fileInfo.Path, fileName);
                 try
                 {
-                    var blob = container.GetBlobReference(fileName);
-                    blob.UploadFile(fileInfo.Path);
+                    var blob = container.GetBlobReferenceFromServer(fileName);
+                    blob.UploadFromFile(fileInfo.Path, FileMode.Open);
                     this.LogDebug("Upload complete!");
                 }
                 catch (Exception ex)

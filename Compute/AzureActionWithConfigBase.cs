@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
 using Inedo.BuildMaster.Data;
-using Inedo.BuildMaster.Features;
-//using Inedo.Linq;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {

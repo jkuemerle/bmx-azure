@@ -48,24 +48,6 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.WebRoleSite = new AzureSite();
         }
 
-        /// <summary>
-        /// Returns a value indicating whether the extension's configurer currently needs to be
-        /// configured.
-        /// </summary>
-        /// <returns>
-        /// True if configurer requires configuration; otherwise false.
-        /// </returns>
-        /// <remarks>
-        /// Unless overridden by an action, this method always returns false.
-        /// </remarks>
-        public override bool IsConfigurerSettingRequired()
-        {
-            if (null != this.Configurer)
-                return string.IsNullOrEmpty(this.Configurer.AzureSDKPath);
-            else
-                return true;
-        }
-
         public override string ToString()
         {
             return string.Format("Packages the {0} definition to {1}.", this.ServiceDefinition, this.OutputFile);

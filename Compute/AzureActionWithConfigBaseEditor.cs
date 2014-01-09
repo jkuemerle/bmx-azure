@@ -67,7 +67,9 @@ namespace Inedo.BuildMasterExtensions.Azure
             //retVal.ConfigurationFileName = this.txtConfigFileName.Text;
             retVal.ConfigurationFilePath = this.ffpConfigFilePath.Text;
             retVal.ConfigurationFileContents = this.txtConfigText.Text;
-            retVal.ConfigurationFileId = "X" == this.ddlConfigurationFile.SelectedValue ? 0 : int.Parse(this.ddlConfigurationFile.SelectedValue);
+            retVal.ConfigurationFileId = "X" == this.ddlConfigurationFile.SelectedValue || !string.IsNullOrEmpty(this.txtConfigText.Text) 
+                ? 0 
+                : int.Parse(this.ddlConfigurationFile.SelectedValue);
             retVal.ConfigurationFileName = this.txtConfigurationFileName.Text;
             retVal.InstanceName = this.ddlInstance.SelectedValue;
             return retVal;
@@ -90,8 +92,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 
             //ddlInstance
             ddlInstance = new DropDownList { ID = "ddlInstance", Width = 300 };
-            this.txtConfigurationFileName = new ValidatingTextBox { Width = 300, Required = true };
-            this.txtInstanceName = new ValidatingTextBox { Width = 300, Required = true };
+            this.txtConfigurationFileName = new ValidatingTextBox { Width = 300 };
+            this.txtInstanceName = new ValidatingTextBox { Width = 300 };
 
             this.ctl_txtInstanceName = new StandardFormField("Instance Name:", this.txtInstanceName) { Visible = false };
             this.ctl_ddlInstance = new StandardFormField("Instance Name:", this.ddlInstance);

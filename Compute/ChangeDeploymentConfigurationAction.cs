@@ -13,8 +13,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Change Deployment Configuration",
-        "Updates the configuration of a deployment in Windows Azure.",
-        "Windows Azure")]
+        "Updates the configuration of a deployment in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(ChangeDeploymentConfigurationActionEditor))]
     public class ChangeDeploymentConfigurationAction : AzureActionWithConfigBase  
     {

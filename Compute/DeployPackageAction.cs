@@ -15,8 +15,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Deploy Package",
-        "Deploys a Cloud Service package onto Windows Azure.",
-        "Windows Azure")]
+        "Deploys a Cloud Service package onto Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(DeployPackageActionEditor))]
     public class DeployPackageAction : AzureActionWithConfigBase  
     {
@@ -98,7 +98,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 this.ServiceName, this.SlotName.ToLowerInvariant());
             if (HttpStatusCode.Accepted != resp.StatusCode)
             {
-                LogError("Error deploying package to {0}. Error code is: {1}, error description: {1}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
+                LogError("Error deploying package to {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
                 return null;
             }
             return resp.Headers.Get("x-ms-request-id");
@@ -142,7 +142,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                     return false;
                 }
                 var blobFileName = Path.GetFileNameWithoutExtension(package) + Guid.NewGuid().ToString() + (Path.HasExtension(package) ? Path.GetExtension(package) : "");
-                var blob = container.GetBlobReferenceFromServer(blobFileName);
+                var blob = container.GetBlockBlobReference(blobFileName);
                 blob.UploadFromFile(package, FileMode.Open);
                 this.blobFileUri = blob.Uri;
                 return true;

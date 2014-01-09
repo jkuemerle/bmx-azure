@@ -13,8 +13,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Create Hosted Service",
-        "Creates a new cloud service in Windows Azure.",
-        "Windows Azure")]
+        "Creates a new cloud service in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(CreateHostedServiceActionEditor))]
     public class CreateHostedServiceAction : AzureComputeActionBase  
     {
@@ -69,7 +69,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             var resp = AzureRequest(RequestType.Post, BuildRequestDocument(),"https://management.core.windows.net/{0}/services/hostedservices");
             if (HttpStatusCode.Created != resp.StatusCode)
             {
-                LogError("Error creating Hosted Service named {0}. Error code is: {1}, error description: {1}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
+                LogError("Error creating Hosted Service named {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
                 return null;
             }
             return resp.Headers.Get("x-ms-request-id");

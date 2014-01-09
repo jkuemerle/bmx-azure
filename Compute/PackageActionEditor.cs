@@ -1,4 +1,5 @@
-﻿using System.Web.UI.WebControls;
+﻿using System.Web;
+using System.Web.UI.WebControls;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web.Controls;
 using Inedo.BuildMaster.Web.Controls.Extensions;
@@ -23,6 +24,7 @@ namespace Inedo.BuildMasterExtensions.Azure
         private CheckBox chkUseCTPPackageFormat;
         private CheckBox chkCopyOnly;
         private SourceControlFileFolderPicker ffpOutput;
+        private ValidatingTextBox txtAdditionalArguments;
 
         public PackageActionEditor() { }
 
@@ -55,7 +57,8 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.ffpPropertiesFile.Text = action.RolePropertiesFile;
             this.chkUseCTPPackageFormat.Checked = action.UseCtpPackageFormat;
             this.chkCopyOnly.Checked = action.CopyOnly;
-            this.ffpOutput.Text = action.OutputFile; 
+            this.ffpOutput.Text = action.OutputFile;
+            this.txtAdditionalArguments.Text = action.AdditionalArguments;
         }
 
         public override ActionBase CreateFromForm()
@@ -72,7 +75,8 @@ namespace Inedo.BuildMasterExtensions.Azure
                 RolePropertiesFile = this.ffpPropertiesFile.Text,
                 UseCtpPackageFormat = this.chkUseCTPPackageFormat.Checked,
                 CopyOnly = this.chkCopyOnly.Checked,
-                OutputFile = this.ffpOutput.Text 
+                OutputFile = this.ffpOutput.Text,
+                AdditionalArguments = this.txtAdditionalArguments.Text
             };
         }
 
@@ -90,9 +94,10 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.txtWorkerRoleAssemblyName = new ValidatingTextBox() { Width = 300 };
             this.txtRolePropertiesFileRoleName = new ValidatingTextBox() { Width = 300 };
             this.ffpPropertiesFile = new SourceControlFileFolderPicker() { ID = "ffpPropertiesFile", DisplayMode = SourceControlBrowser.DisplayModes.FoldersAndFiles, ServerId = 1 };
-            this.chkUseCTPPackageFormat = new CheckBox() { Width = 300 };
+            this.chkUseCTPPackageFormat = new CheckBox() { Width = 300, Text = "Use CTP Package Format", Checked = true };
             this.ffpOutput = new SourceControlFileFolderPicker() { ID = "ffpOutput", DisplayMode = SourceControlBrowser.DisplayModes.FoldersAndFiles, ServerId = 1 };
-            this.chkCopyOnly = new CheckBox() { Width = 300 };
+            this.chkCopyOnly = new CheckBox() { Width = 300, Text = "Copy Only" };
+            this.txtAdditionalArguments = new ValidatingTextBox() { Width = 300 };
             this.Controls.Add(
                 new FormFieldGroup("Service Definition",
                     "Provide the path to the default service definition file (ServiceDefinition.csdef) or the explicit file name.",
@@ -100,21 +105,29 @@ namespace Inedo.BuildMasterExtensions.Azure
                     new StandardFormField("Path:", this.ffpServiceDefinition)
                 ),
                 new FormFieldGroup("Web Role",
-                    "Web role information.",
+                    "Specify the name of the web role, the path to the \\bin directory of the web application output, and optionally, the " +
+                    "file name of the assembly that contains the web role. If there is no web role for this project, leave these " +
+                    "fields blank. If more than 1 web role exists, use the additional arguments section with the format: <br /><br />" +
+                    HttpUtility.HtmlEncode("/role:<rolename>;[<role-directory>];[<role-entrypoint-DLL>]"),
                     false,
                     new StandardFormField("Role Name:", this.txtWebRoleName),
                     new StandardFormField("Bin Directory:", this.ffpWebRoleBinDir),
                     new StandardFormField("Assembly Name:",this.txtWebRoleAssemblyName)
                 ),
                 new FormFieldGroup("Site",
-                    "Site information.",
+                    "Specify a site name for the web role, and a virtual to physical path mapping. If more than 1 mapping is required, " +
+                    "use the additional arguments section with the format: <br /><br />" +
+                    HttpUtility.HtmlEncode("/sites:<rolename>;<virtual-path1>;<physical-path1>;..."),
                     false,
                     new StandardFormField("Role Name:", this.txtWebRoleSiteRoleName),
                     new StandardFormField("Virtual Path:", this.txtWebRoleSiteVirtualPath),
                     new StandardFormField("Physical Path:",this.txtWebRoleSitePhysicaPath)
                 ),
                 new FormFieldGroup("Worker Role",
-                    "Worker role Information.",
+                    "Specify the name of the worker role, the path to the \\bin directory of the project output, and the assembly " +
+                    "that contains the entry point for the worker role. If there is no worker role for this project, leave these " + 
+                    "fields blank. If more than 1 worker role exists, use the additional arguments section with the format: <br /><br />" +
+                    HttpUtility.HtmlEncode("/role:<rolename>;[<role-directory>];[<role-entrypoint-DLL>]"),
                     false,
                     new StandardFormField("Role Name:", this.txtWorkerRoleName),
                     new StandardFormField("Bin Directory:",this.ffpWorkerRoleBinDir),
@@ -127,18 +140,23 @@ namespace Inedo.BuildMasterExtensions.Azure
                     new StandardFormField("Path:",ffpPropertiesFile)
                 ),
                 new FormFieldGroup("Options",
-                    "Packaging options.",
+                    "Specify whether the new package format should be used, and whether to create a directory layout for the role " +
+                    "binaries in order to run the service locally. To create a .cspkg, leave Copy Only unchecked.",
                     false,
-                    new StandardFormField("Use CTP Package Format",chkUseCTPPackageFormat),
-                    new StandardFormField("Copy Only:",this.chkCopyOnly)
+                    new StandardFormField("",this.chkUseCTPPackageFormat),
+                    new StandardFormField("",this.chkCopyOnly)
+                ),
+                new FormFieldGroup("Additional Arguments",
+                    "Specify any additional arguments to pass to cspack.exe.",
+                    false,
+                    new StandardFormField("Additional Arguments:", this.txtAdditionalArguments)
                 ),
                 new FormFieldGroup("Output",
-                    "Packaging output.",
+                    "Specify the file name of the package output (if Copy Only is unchecked), or the output directory for the role binaries.",
                     true,
                     new StandardFormField("Path:",this.ffpOutput)
                 )
             );
         }
-
     }
 }

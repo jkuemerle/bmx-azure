@@ -11,6 +11,7 @@ using System.Linq;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Extensibility.Agents;
+using Inedo.BuildMaster.Data;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
@@ -29,7 +30,26 @@ namespace Inedo.BuildMasterExtensions.Azure
         {
             get
             {
-                return this.GetExtensionConfigurer() as AzureConfigurer;
+                if (this.IsExecuting)
+                {
+                    return this.GetExtensionConfigurer() as AzureConfigurer;
+                }
+                else
+                {
+                    var typ = typeof(AzureConfigurer);
+                    
+                    var profiles = StoredProcs
+                        .ExtensionConfiguration_GetConfigurations(typ.FullName + "," + typ.Assembly.GetName().Name)
+                        .Execute();
+
+                    var configurer =
+                        profiles.FirstOrDefault(p => p.Default_Indicator.Equals(Domains.YN.Yes)) ?? profiles.FirstOrDefault();
+
+                    if (configurer == null) 
+                        return null;
+
+                    return (AzureConfigurer)Util.Persistence.DeserializeFromPersistedObjectXml(configurer.Extension_Configuration);
+                }
             }
         }
 
@@ -190,6 +210,8 @@ namespace Inedo.BuildMasterExtensions.Azure
                 using (XmlReader reader = XmlReader.Create(resp.GetResponseStream()))
                 {
                     retval.Document = XDocument.Load(reader);
+                    retval.ErrorMessage = (string)retval.Document.Descendants(XName.Get("Message", "http://schemas.microsoft.com/windowsazure")).FirstOrDefault();
+                    retval.ErrorCode = (string)retval.Document.Descendants(XName.Get("Code", "http://schemas.microsoft.com/windowsazure")).FirstOrDefault();
                 }
             }
             return retval;

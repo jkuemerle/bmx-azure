@@ -4,13 +4,14 @@ using System.IO;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
+using System;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Package Application",
-        "Packages Web and Worker Role applications for deployment onto Windows Azure.",
-        "Windows Azure")]
+        "Packages Web and Worker Role applications for deployment onto Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(PackageActionEditor))]
     public sealed class PackageAction : AzureAction 
     {
@@ -40,6 +41,9 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         [Persistent]
         public string RolePropertiesFileRoleName { get; set; }
+
+        [Persistent]
+        public string AdditionalArguments { get; set; }
 
         public PackageAction()
         {
@@ -91,6 +95,9 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         internal string BuildCommand()
         {
+            if (string.IsNullOrEmpty(this.Configurer.AzureSDKPath))
+                throw new InvalidOperationException("Could not find the Azure SDK path. Update the Azure extension configuration to include this path.");
+
             return Path.Combine(this.Configurer.AzureSDKPath, "cspack.exe");
         }
 
@@ -126,6 +133,9 @@ namespace Inedo.BuildMasterExtensions.Azure
                     Directory.CreateDirectory(outputDir);
                 p.AppendFormat(" /out:{0}", output);
             }
+            if (!string.IsNullOrEmpty(this.AdditionalArguments))
+                p.Append(" " + this.AdditionalArguments);
+
             return p.ToString();
         }
     }

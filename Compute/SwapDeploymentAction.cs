@@ -13,8 +13,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Swap Deployment",
-        "Swaps a production and staging deployment in Windows Azure.",
-        "Windows Azure")]
+        "Swaps a production and staging deployment in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(SwapDeploymentActionEditor))]
     public class SwapDeploymentAction : AzureComputeActionBase  
     {

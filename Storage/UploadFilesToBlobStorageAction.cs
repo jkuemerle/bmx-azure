@@ -8,13 +8,14 @@ using Inedo.BuildMaster.Web;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Inedo.BuildMasterExtensions.Azure.Storage
 {
     [ActionProperties(
         "Upload Files to Blob Storage",
-        "Uploads files from a BuildMaster Server to Windows Azure Blob Storage.",
-        "Windows Azure")]
+        "Uploads files from a BuildMaster Server to Windows Azure Blob Storage.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(UploadFilesToBlobStorageActionEditor))]
     public sealed class UploadFilesToBlobStorageAction : RemoteActionBase
     {
@@ -102,7 +103,7 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
                 this.LogInformation("Transferring {0} to {1}...", fileInfo.Path, fileName);
                 try
                 {
-                    var blob = container.GetBlobReferenceFromServer(fileName);
+                    var blob = container.GetBlockBlobReference(fileName);
                     blob.UploadFromFile(fileInfo.Path, FileMode.Open);
                     this.LogDebug("Upload complete!");
                 }

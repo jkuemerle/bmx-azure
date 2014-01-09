@@ -13,8 +13,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Delete Deployment",
-        "Deletes a deployment by slot or by name from a cloud service in Windows Azure.",
-        "Windows Azure")]
+        "Deletes a deployment by slot or by name from a cloud service in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(DeleteDeploymentActionEditor))]
     public class DeleteDeploymentAction : AzureComputeActionBase 
     {
@@ -66,7 +66,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                     this.ServiceName, this.DeploymentName);
             if (HttpStatusCode.Accepted != resp.StatusCode)
             {
-                LogError("Error deleting Hosted Service named {0}. Error code is: {1}, error description: {1}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
+                LogError("Error deleting deployment named {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
                 return null;
             }
             return resp.Headers.Get("x-ms-request-id");

@@ -48,6 +48,7 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         private string GetConfigText(int configID, string instanceName)
         {
+            this.LogDebug("Loading configuration file instance {0}...", instanceName);
             var file = StoredProcs.ConfigurationFiles_GetConfigurationFileVersions(configID, this.Context.ApplicationId, null, null, instanceName, 1).Execute().FirstOrDefault();
             if (null == file)
                 return null;
@@ -56,7 +57,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 this.LogError("Configuration for file {0} in {1} is empty.", configID, instanceName);
                 return null;
             }
-            LogInformation("Return config.");
+            this.LogDebug("Configuration file found.");
             return Encoding.Default.GetString(file.File_Bytes).Substitute(Context.Variables);
         }
 

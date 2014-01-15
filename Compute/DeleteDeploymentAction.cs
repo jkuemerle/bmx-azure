@@ -57,6 +57,15 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         internal string MakeRequest()
         {
+            var currentDeployment = AzureRequest(RequestType.Get, null,
+                    "https://management.core.windows.net/{0}/services/hostedservices/{1}/deploymentslots/{2}",
+                    this.ServiceName, this.SlotName);
+            if (string.IsNullOrEmpty((string)currentDeployment.Document.Root.Element(ns + "Name")))
+            {
+                this.LogInformation("There is currently nothing deployed to the {0} deployment slot.", this.SlotName);
+                return null;
+            }
+
             AzureResponse resp = null;
             if(string.IsNullOrEmpty(this.DeploymentName))
                 resp = AzureRequest(RequestType.Delete, null, "https://management.core.windows.net/{0}/services/hostedservices/{1}/deploymentslots/{2}", 

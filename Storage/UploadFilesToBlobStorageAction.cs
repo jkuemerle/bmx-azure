@@ -1,14 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Files;
 using Inedo.BuildMaster.Web;
-using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Inedo.BuildMasterExtensions.Azure.Storage
 {
@@ -104,8 +103,25 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
                 try
                 {
                     var blob = container.GetBlockBlobReference(fileName);
-                    blob.UploadFromFile(fileInfo.Path, FileMode.Open);
-                    this.LogDebug("Upload complete!");
+
+                    var transfer = new BlobTransfer(blob);
+                    transfer.TransferProgressChanged += (s, e) =>
+                    {
+                        this.LogDebug("Upload Progress: {0}/{1} ({2}%) - Est. Time Remaining: {3}", e.BytesSent, e.TotalBytesToSend, e.ProgressPercentage, e.TimeRemaining);
+                    };
+                    transfer.TransferCompleted += (s, e) =>
+                    {
+                        this.LogDebug("File {0} uploaded successfully.", fileName);
+                    };
+
+                    var result = transfer.UploadBlobAsync(fileName);
+
+                    int handled = WaitHandle.WaitAny(new[] { result.AsyncWaitHandle, this.Context.CancellationToken.WaitHandle });
+                    if (handled == 1)
+                    {
+                        result.Cancel();
+                        this.ThrowIfCanceledOrTimeoutExpired();
+                    }
                 }
                 catch (Exception ex)
                 {

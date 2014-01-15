@@ -46,10 +46,14 @@ namespace Inedo.BuildMasterExtensions.Azure
             base.CreateChildControls();
             txtProductionDeploymentName = new ValidatingTextBox() { Width = 300 };
             txtSourceDeploymentName = new ValidatingTextBox() { Width = 300 };
-            this.Controls.Add(new FormFieldGroup("Swap Deployment Options", 
-                "Options for the Swap Deployment action",true,
-                new StandardFormField("Production Deployment Name:",txtProductionDeploymentName),
-                new StandardFormField("Source Deployment Name:",txtSourceDeploymentName)
+            this.Controls.Add(
+                new FormFieldGroup(
+                    "Swap Deployment Options", 
+                    "Specify the Source and Production deployment names to swap. "
+                    + "Leave these fields blank to swap Production and Staging.",
+                    true,
+                    new StandardFormField("Production Deployment Name:",txtProductionDeploymentName),
+                    new StandardFormField("Source Deployment Name:",txtSourceDeploymentName)
                 )
             );
         }

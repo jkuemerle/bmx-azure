@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net;
 using System.IO;
-using Microsoft.WindowsAzure;
+using System.Net;
+using System.Text;
+using System.Threading;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
@@ -125,34 +123,59 @@ namespace Inedo.BuildMasterExtensions.Azure
         {
             if (!string.IsNullOrEmpty(this.PackageFileStorageLocation))
             {
+                this.LogDebug("Using stored file at location {0}", this.PackageFileStorageLocation);
                 this.blobFileUri = new Uri(PackageFileStorageLocation);
                 return true;
             }
-            bool retVal = false;
+
             try
             {
+                this.LogDebug("Preparing to upload file...");
                 var account = new CloudStorageAccount(new StorageCredentials(this.StorageAccountName, this.StorageAccessKey), true);
                 var blobClient = account.CreateCloudBlobClient();
+                blobClient.SingleBlobUploadThresholdInBytes = 63 * 1024 * 1024;
                 var container = blobClient.GetContainerReference(BlobContainer);
-                container.CreateIfNotExists(); 
+                this.LogDebug("Creating container \"{0}\" if it doesn't already exist...", BlobContainer);
+                container.CreateIfNotExists();
                 string package = this.ResolveDirectory(this.PackageFile);
                 if (!File.Exists(package))
                 {
                     LogError("UploadPackage unable to locate package file at: {0}", package);
                     return false;
                 }
-                var blobFileName = Path.GetFileNameWithoutExtension(package) + Guid.NewGuid().ToString() + (Path.HasExtension(package) ? Path.GetExtension(package) : "");
+                string blobFileName = Path.GetFileNameWithoutExtension(package) + Guid.NewGuid().ToString() + (Path.HasExtension(package) ? Path.GetExtension(package) : "");
                 var blob = container.GetBlockBlobReference(blobFileName);
-                blob.UploadFromFile(package, FileMode.Open);
+                blob.StreamWriteSizeInBytes = 64 * 1024;
+                this.LogInformation("Uploading package {0} to blob file {1} for deployment.", package, blobFileName);
+
+                var transfer = new BlobTransfer(blob);
+                transfer.TransferProgressChanged += (s, e) =>
+                {
+                    this.LogDebug("Upload Progress: {0}/{1} ({2}%) - Est. Time Remaining: {3}", e.BytesSent, e.TotalBytesToSend, e.ProgressPercentage, e.TimeRemaining);
+                };
+                transfer.TransferCompleted += (s, e) =>
+                {
+                    this.LogInformation("Package {0} uploaded successfully.", package);
+                };
+                
+                var result = transfer.UploadBlobAsync(package);
+
+                int handled = WaitHandle.WaitAny(new[] { result.AsyncWaitHandle, this.Context.CancellationToken.WaitHandle });
+                if (handled == 1)
+                {
+                    result.Cancel();
+                    this.ThrowIfCanceledOrTimeoutExpired();
+                }
+                
                 this.blobFileUri = blob.Uri;
+                
                 return true;
             }
             catch (Exception ex)
             {
                 LogError("UploadPackage error: {0}", ex.ToString());
-                retVal = false;
+                return false;
             }
-            return retVal;
         }
 
         internal bool DeletePackage()
@@ -164,7 +187,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 var blobClient = account.CreateCloudBlobClient();
                 var container = blobClient.GetContainerReference(BlobContainer);
                 container.CreateIfNotExists();
-                var blob = container.GetBlobReferenceFromServer(this.blobFileUri.ToString());
+                var blob = container.GetBlockBlobReference(this.blobFileUri.ToString());
                 if (null != blob)
                 {
                     blob.Delete();
@@ -178,8 +201,5 @@ namespace Inedo.BuildMasterExtensions.Azure
             }
             return retVal;
         }
-
-
-
     }
 }

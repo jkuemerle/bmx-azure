@@ -114,7 +114,7 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
                         this.LogDebug("File {0} uploaded successfully.", fileName);
                     };
 
-                    var result = transfer.UploadBlobAsync(fileName);
+                    var result = transfer.UploadBlobAsync(fileInfo.Path);
 
                     int handled = WaitHandle.WaitAny(new[] { result.AsyncWaitHandle, this.Context.CancellationToken.WaitHandle });
                     if (handled == 1)

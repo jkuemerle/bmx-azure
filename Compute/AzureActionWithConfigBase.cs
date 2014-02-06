@@ -7,10 +7,11 @@ using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
 using Inedo.BuildMaster.Data;
+using System.Text.RegularExpressions;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public abstract class AzureActionWithConfigBase : AzureComputeActionBase 
+    public abstract class AzureActionWithConfigBase : AzureComputeActionBase
     {
         [Persistent]
         public string ConfigurationFilePath { get; set; }
@@ -26,7 +27,7 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         [Persistent]
         public string InstanceName { get; set; }
-        
+
         protected string GetConfigurationFileContents()
         {
             if (!string.IsNullOrEmpty(this.ConfigurationFileContents))
@@ -43,22 +44,48 @@ namespace Inedo.BuildMasterExtensions.Azure
                     return File.ReadAllText(configFile);
                 return File.ReadAllText(configFile).Substitute(Context.Variables);
             }
-            return GetConfigText(this.ConfigurationFileId,this.InstanceName);
+            return GetConfigText(this.ConfigurationFileId, this.InstanceName);
+        }
+
+        protected virtual byte[] GetConfigurationFileContents(Tables.ConfigurationFileVersions_Extended configurationFile, string releaseNumber)
+        {
+            if (configurationFile == null)
+            {
+                throw new ArgumentNullException("configurationFile");
+            }
+            byte[] configurationFileContents = Util.ConfigurationFiles.GetConfigurationFileContents(configurationFile, releaseNumber, base.Context.ServerId, new Action<string>(this.LogDebug));
+
+
+            string str2 = Regex.Replace(Encoding.UTF8.GetString(configurationFileContents), "%[^%]+%", (Match m) =>
+            {
+                string str;
+                string str1 = m.Value.Trim(new char[] { '%' });
+                if (base.Context.Variables.TryGetValue(str1, out str))
+                {
+                    return str;
+                }
+                return m.Value;
+            });
+            configurationFileContents = Encoding.UTF8.GetBytes(str2);
+
+            return configurationFileContents;
         }
 
         private string GetConfigText(int configID, string instanceName)
         {
             this.LogDebug("Loading configuration file instance {0}...", instanceName);
-            var file = StoredProcs.ConfigurationFiles_GetConfigurationFileVersions(configID, this.Context.ApplicationId, null, null, instanceName, 1).Execute().FirstOrDefault();
+            
+            var configurationFile = StoredProcs.ConfigurationFiles_GetConfigurationFileVersion(configID, instanceName, null, null).Execute().FirstOrDefault();
+            var file = GetConfigurationFileContents(configurationFile, null);
             if (null == file)
                 return null;
-            if (0 == file.File_Bytes.Length)
+            if (0 == file.Length)
             {
                 this.LogError("Configuration for file {0} in {1} is empty.", configID, instanceName);
                 return null;
             }
             this.LogDebug("Configuration file found.");
-            return Encoding.Default.GetString(file.File_Bytes).Substitute(Context.Variables);
+            return Encoding.Default.GetString(file).Substitute(Context.Variables);
         }
 
         private string GetConfigText(string configName)

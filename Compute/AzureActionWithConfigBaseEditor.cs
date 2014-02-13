@@ -67,7 +67,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             //retVal.ConfigurationFileName = this.txtConfigFileName.Text;
             retVal.ConfigurationFilePath = this.ffpConfigFilePath.Text;
             retVal.ConfigurationFileContents = this.txtConfigText.Text;
-            retVal.ConfigurationFileId = "X" == this.ddlConfigurationFile.SelectedValue || !string.IsNullOrEmpty(this.txtConfigText.Text) 
+            retVal.ConfigurationFileId = String.IsNullOrEmpty(this.ddlConfigurationFile.SelectedValue) || "X" == this.ddlConfigurationFile.SelectedValue || !string.IsNullOrEmpty(this.txtConfigText.Text)
                 ? 0 
                 : int.Parse(this.ddlConfigurationFile.SelectedValue);
             retVal.ConfigurationFileName = this.txtConfigurationFileName.Text;

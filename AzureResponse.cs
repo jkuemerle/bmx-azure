@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net;
-using System.Xml;
+﻿using System.Net;
 using System.Xml.Linq;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public class AzureResponse
+    internal sealed class AzureResponse
     {
-        public enum OperationStatusResult { InProgress, Succeeded, Failed };
+        public enum OperationStatusResult { Unknown, InProgress, Succeeded, Failed };
 
         public HttpStatusCode StatusCode { get; set; }
 

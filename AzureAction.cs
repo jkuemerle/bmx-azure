@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Xml;
-using System.Xml.Linq;
-using System.Threading;
-using System.Text;
 using System.IO;
 using System.Linq;
-
+using System.Net;
+using System.Text;
+using System.Threading;
+using System.Xml;
+using System.Xml.Linq;
 using Inedo.BuildMaster;
+using Inedo.BuildMaster.Data;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Extensibility.Agents;
-using Inedo.BuildMaster.Data;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
@@ -109,86 +108,50 @@ namespace Inedo.BuildMasterExtensions.Azure
             return retVal;
         }
 
-        internal protected AzureResponse WaitForRequestCompletion(string RequestID)
+        internal protected void WaitForRequestCompletion(string requestId)
         {
-            AzureResponse retVal = new AzureResponse() { OperationStatus = AzureResponse.OperationStatusResult.Failed, ErrorCode = "-1", ErrorMessage = "General Failure" };
-            try
+            while (true)
             {
-                bool done = false;
-                var startTime = DateTime.Now;
-                while (!done)
+                var azureResponse = this.AzureRequest(RequestType.Get, null, "https://management.core.windows.net/{0}/operations/{1}", requestId);
+
+                if (azureResponse.StatusCode != HttpStatusCode.OK)
                 {
-                    if (DateTime.Now.Subtract(startTime) > TimeSpan.FromHours(24))
-                        throw new Exception(string.Format("Wait For Completion timeout error. The build has taken more than 24 hours."));
-                    var resp = AzureRequest(RequestType.Get, null, "https://management.core.windows.net/{0}/operations/{1}",RequestID);
-                    if (HttpStatusCode.OK != resp.StatusCode)
-                    {
-                        LogError("HTTP Error {0} waiting for the completion of request {1}", resp.StatusCode, RequestID);
-                        retVal.ErrorMessage = string.Format("HTTP Error {0} waiting for the completion of request {1}", resp.StatusCode, RequestID);
-                        done = true;
-                    }
-                    else
-                    {
-                        var result = (AzureResponse.OperationStatusResult)Enum.Parse(typeof(AzureResponse.OperationStatusResult), resp.Document.Root.Element(ns + "Status").Value);
-                        if (AzureResponse.OperationStatusResult.InProgress == result)
-                            Thread.Sleep(2000);
-                        else
-                        {
-                            retVal.OperationStatus = result;
-                            retVal.Document = resp.Document;
-                            retVal.StatusCode = (HttpStatusCode) Enum.Parse(typeof(HttpStatusCode),  resp.Document.Root.Element(ns + "HttpStatusCode").Value);
-                            if (AzureResponse.OperationStatusResult.Succeeded == result)
-                            {
-                                retVal.ErrorCode = string.Empty;
-                                retVal.ErrorMessage = string.Empty;
-                                LogInformation("Succeeded waiting for request {0}",RequestID);
-                            }
-                            else
-                            {
-                                retVal.ErrorCode = resp.Document.Root.Element(ns + "Code").Value;
-                                retVal.ErrorMessage = resp.Document.Root.Element(ns + "Message").Value;
-                                LogInformation("Failed waiting for request {0}. Error code is {1} and message is: {2}",RequestID,retVal.ErrorCode,retVal.ErrorMessage);
-                            }
-                            done = true;
-                        }
-                    }
+                    this.LogError("HTTP Error {0} waiting for the completion of request {1}", azureResponse.StatusCode, requestId);
+                    return;
                 }
+                else if (azureResponse.OperationStatus != AzureResponse.OperationStatusResult.InProgress)
+                {
+                    if (azureResponse.OperationStatus == AzureResponse.OperationStatusResult.Succeeded)
+                        this.LogInformation("Finished waiting for request {0} successfully.", requestId);
+                    else
+                        this.LogInformation("Failed waiting for request {0}. Error code is {1} and message is: {2}", requestId, azureResponse.ErrorCode, azureResponse.ErrorMessage);
+
+                    return;
+                }
+
+                Thread.Sleep(2000);
+                this.ThrowIfCanceledOrTimeoutExpired();
             }
-            catch (Exception ex)
-            {
-                LogError("Unable to wait for the completion of request {0}. Error is: {1}", RequestID, ex.ToString());
-            }
-            return retVal;
         }
 
-        internal AzureResponse AzureRequest(RequestType RequestType, string Payload, string UriFormat, params object[] args)
+        internal AzureResponse AzureRequest(RequestType requestType, string payload, string uriFormat, params object[] args)
         {
-            AzureResponse retval = new AzureResponse();
-            var newargs = new List<object>();
-            newargs.Add(Credentials.SubscriptionID);
-            var uri = new Uri(string.Format(UriFormat,newargs.Concat(args).ToArray<object>()));
+            var azureResponse = new AzureResponse();
+            var uri = new Uri(string.Format(uriFormat, new object[] { this.Credentials.SubscriptionID }.Concat(args).ToArray()));
             var req = (HttpWebRequest)HttpWebRequest.Create(uri);
-            switch (RequestType)
-            {
-                case AzureAction.RequestType.Get :
-                    req.Method = "GET";
-                    break;
-                case AzureAction.RequestType.Post :
-                    req.Method = "POST";
-                    break;
-                case AzureAction.RequestType.Delete :
-                    req.Method = "DELETE";
-                    break;
-                default :
-                    req.Method = "GET";
-                    break;
-            }
+            if (requestType == RequestType.Post)
+                req.Method = "POST";
+            else if (requestType == RequestType.Delete)
+                req.Method = "DELETE";
+            else
+                req.Method = "GET";
+
             req.Headers.Add("x-ms-version", OperationVersion);
             req.ClientCertificates.Add(this.Credentials.Certificate);
             req.ContentType = "application/xml";
-            if(!string.IsNullOrEmpty(Payload))
+            if(!string.IsNullOrEmpty(payload))
             {
-                var buffer = Encoding.UTF8.GetBytes(Payload);
+                var buffer = Encoding.UTF8.GetBytes(payload);
                 req.ContentLength = buffer.Length;
                 Stream reqStream = req.GetRequestStream();
                 reqStream.Write(buffer, 0, buffer.Length);
@@ -203,20 +166,22 @@ namespace Inedo.BuildMasterExtensions.Azure
             {
                 resp = (HttpWebResponse)ex.Response;
             }
-            retval.StatusCode = resp.StatusCode;
-            retval.Headers = resp.Headers;
+            azureResponse.StatusCode = resp.StatusCode;
+            azureResponse.Headers = resp.Headers;
             if (resp.ContentLength > 0)
             {
                 using (XmlReader reader = XmlReader.Create(resp.GetResponseStream()))
                 {
-                    retval.Document = XDocument.Load(reader);
-                    retval.ErrorMessage = (string)retval.Document.Descendants(XName.Get("Message", "http://schemas.microsoft.com/windowsazure")).FirstOrDefault();
-                    retval.ErrorCode = (string)retval.Document.Descendants(XName.Get("Code", "http://schemas.microsoft.com/windowsazure")).FirstOrDefault();
+                    azureResponse.Document = XDocument.Load(reader);
+                    azureResponse.ErrorMessage = (string)azureResponse.Document.Descendants(ns + "Message").FirstOrDefault();
+                    azureResponse.ErrorCode = (string)azureResponse.Document.Descendants(ns + "Code").FirstOrDefault();
+                    AzureResponse.OperationStatusResult status;
+                    if (Enum.TryParse<AzureResponse.OperationStatusResult>(azureResponse.Document.Root.Element(ns + "Status").Value, true, out status))
+                        azureResponse.OperationStatus = status;
                 }
             }
-            return retval;
+
+            return azureResponse;
         }
-
-
     }
 }

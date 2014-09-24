@@ -136,6 +136,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         internal AzureResponse AzureRequest(RequestType requestType, string payload, string uriFormat, params object[] args)
         {
+            this.LogDebug("Sending Azure API request of type {0}...", requestType);
+
             var azureResponse = new AzureResponse();
             var uri = new Uri(string.Format(uriFormat, new object[] { this.Credentials.SubscriptionID }.Concat(args).ToArray()));
             var req = (HttpWebRequest)HttpWebRequest.Create(uri);
@@ -149,8 +151,9 @@ namespace Inedo.BuildMasterExtensions.Azure
             req.Headers.Add("x-ms-version", OperationVersion);
             req.ClientCertificates.Add(this.Credentials.Certificate);
             req.ContentType = "application/xml";
-            if(!string.IsNullOrEmpty(payload))
+            if (!string.IsNullOrEmpty(payload))
             {
+                this.LogDebug("Writing request data...");
                 var buffer = Encoding.UTF8.GetBytes(payload);
                 req.ContentLength = buffer.Length;
                 Stream reqStream = req.GetRequestStream();
@@ -172,12 +175,17 @@ namespace Inedo.BuildMasterExtensions.Azure
             {
                 using (XmlReader reader = XmlReader.Create(resp.GetResponseStream()))
                 {
+                    this.LogDebug("Parsing Azure API XML response...");
+
                     azureResponse.Document = XDocument.Load(reader);
                     azureResponse.ErrorMessage = (string)azureResponse.Document.Descendants(ns + "Message").FirstOrDefault();
                     azureResponse.ErrorCode = (string)azureResponse.Document.Descendants(ns + "Code").FirstOrDefault();
                     AzureResponse.OperationStatusResult status;
-                    if (Enum.TryParse<AzureResponse.OperationStatusResult>(azureResponse.Document.Root.Element(ns + "Status").Value, true, out status))
+                    var statusElement = azureResponse.Document.Root.Element(ns + "Status");
+                    if (statusElement != null && Enum.TryParse<AzureResponse.OperationStatusResult>(statusElement.Value, true, out status))
                         azureResponse.OperationStatus = status;
+
+                    this.LogDebug("Azure API XML response parsed.");
                 }
             }
 

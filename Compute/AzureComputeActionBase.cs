@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
+using System.Xml.Linq;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
@@ -61,11 +61,19 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         public bool UsesExtensionConfiguration { get; set; }
 
+        protected static string Base64Encode(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return null;
+
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+
         protected string ParseExtendedProperties()
         {
             if(string.IsNullOrEmpty(this.ExtendedProperties))
                 return string.Empty;
-            var props = this.ExtendedProperties.ParseNameValue();
+            var props = ParseNameValue(this.ExtendedProperties);
             if(props.Count <= 0)
                 return string.Empty;
             StringBuilder sb = new StringBuilder();
@@ -74,6 +82,35 @@ namespace Inedo.BuildMasterExtensions.Azure
                 sb.AppendFormat("<ExtendedProperty>\r\n<Name>{0}</Name>\r\n<Value>{1}</Value></ExtendedProperty>\r\n", p.Key, p.Value);
             sb.Append("</ExtendedProperties>\r\n");
             return sb.ToString();
+        }
+
+        protected IEnumerable<XElement> ParseExtendedProperties2(XNamespace ns)
+        {
+            if (string.IsNullOrEmpty(this.ExtendedProperties))
+                return Enumerable.Empty<XElement>();
+
+            var props = ParseNameValue(this.ExtendedProperties);
+            if (props.Count <= 0)
+                return Enumerable.Empty<XElement>();
+
+            return new[]
+            {
+                new XElement(ns + "ExtendedProperties",
+                    from p in props
+                    select new XElement(ns + "ExtendedProperty",
+                        new XElement(ns + "Name", p.Key ?? string.Empty),
+                        new XElement(ns + "Value", p.Value ?? string.Empty)
+                    )
+                )
+            };
+        }
+
+        private static Dictionary<string, string> ParseNameValue(string value)
+        {
+            return (from v in value.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                    let p = v.Split(new[] { '=' }, 2)
+                    where p.Length == 2 && !string.IsNullOrWhiteSpace(p[0])
+                    select p).ToDictionary(p => p[0], p => p[1]);
         }
     }
 }

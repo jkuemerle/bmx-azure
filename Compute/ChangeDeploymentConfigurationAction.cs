@@ -8,6 +8,7 @@ using Microsoft.WindowsAzure;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
+using System.Xml.Linq;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
@@ -85,19 +86,18 @@ namespace Inedo.BuildMasterExtensions.Azure
             return resp.Headers.Get("x-ms-request-id");
         }
 
-        internal string BuildRequestDocument()
+        private string BuildRequestDocument()
         {
-            StringBuilder body = new StringBuilder();
-            body.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<ChangeConfiguration xmlns=\"http://schemas.microsoft.com/windowsazure\">\r\n");
-            body.AppendFormat("<Configuration>{0}</Configuration>",this.GetConfigurationFileContents().AsBase64());
-            body.AppendFormat("<TreatWarningsAsError>{0}</TreatWarningsAsError>",this.TreatWarningsAsError.ToString().ToLowerInvariant());
-            body.AppendFormat("<Mode>{0}</Mode>", this.Mode);
-            body.Append(ParseExtendedProperties());
-            if (!string.IsNullOrEmpty(this.ExtensionConfiguration))
-                body.AppendFormat("<ExtensionConfiguration>{0}</ExtensionConfiguration>", this.ExtensionConfiguration);
-            body.Append("</ChangeConfiguration>\r\n");
-            return body.ToString();
+            var ns = XNamespace.Get("http://schemas.microsoft.com/windowsazure");
+            return new XDocument(
+                new XElement(ns + "ChangeConfiguration",
+                    new XElement(ns + "Configuration", Base64Encode(this.GetConfigurationFileContents())),
+                    new XElement(ns + "TreatWarningsAsError", this.TreatWarningsAsError.ToString().ToLowerInvariant()),
+                    new XElement(ns + "Mode", this.Mode),
+                    this.ParseExtendedProperties2(ns),
+                    !string.IsNullOrEmpty(this.ExtensionConfiguration) ? (object)new XElement(ns + "ExtensionConfiguration", this.ExtensionConfiguration) : Enumerable.Empty<XElement>()
+                )
+            ).ToString(SaveOptions.DisableFormatting);
         }
-
     }
 }

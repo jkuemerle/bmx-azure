@@ -108,8 +108,8 @@ namespace Inedo.BuildMasterExtensions.Azure
             body.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<CreateDeployment xmlns=\"http://schemas.microsoft.com/windowsazure\">\r\n");
             body.AppendFormat("<Name>{0}</Name>\r\n",this.DeploymentName);
             body.AppendFormat("<PackageUrl>{0}</PackageUrl>",this.blobFileUri);
-            body.AppendFormat("<Label>{0}</Label>",this.Label.AsBase64());
-            body.AppendFormat("<Configuration>{0}</Configuration>",this.GetConfigurationFileContents().AsBase64());
+            body.AppendFormat("<Label>{0}</Label>", Base64Encode(this.Label));
+            body.AppendFormat("<Configuration>{0}</Configuration>", Base64Encode(this.GetConfigurationFileContents()));
             body.AppendFormat("<StartDeployment>{0}</StartDeployment>",this.StartDeployment.ToString().ToLowerInvariant());
             body.AppendFormat("<TreatWarningsAsError>{0}</TreatWarningsAsError>",this.TreatWarningsAsError.ToString().ToLowerInvariant());
             body.Append(ParseExtendedProperties());

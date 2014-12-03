@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Data;
+using System.Linq;
 using System.Web.UI.WebControls;
 using Inedo.BuildMaster.Data;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web.Controls;
-using Inedo.BuildMaster.Web.Controls.Extensions;
 using Inedo.Web.Controls;
-using System.Linq;
-using System.Data;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public abstract class  AzureActionWithConfigBaseEditor: AzureComputeActionBaseEditor
+    public abstract class AzureActionWithConfigBaseEditor : AzureComputeActionBaseEditor
     {
-        //protected ValidatingTextBox txtConfigFileName;
         protected TextBox txtConfigText;
         protected SourceControlFileFolderPicker ffpConfigFilePath;
         protected DropDownList ddlConfigurationFile, ddlInstance;
@@ -23,7 +19,6 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         public AzureActionWithConfigBaseEditor()
         {
-            //this.txtConfigFileName = new ValidatingTextBox() { Width = 300 };
             this.txtConfigText = new TextBox() { TextMode = TextBoxMode.MultiLine, Width = 300, Rows = 4 };
             this.ffpConfigFilePath = new SourceControlFileFolderPicker() { Width = 300, ServerId = 1 };
         }
@@ -33,8 +28,6 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.EnsureChildControls();
             base.BindToForm(extension);
             var action = (AzureActionWithConfigBase)extension;
-            //this.txtConfigFileName.Text = action.ConfigurationFileContents;
-            //this.txtConfigFileName.Text = action.ConfigurationFileName;
             this.ffpConfigFilePath.Text = action.ConfigurationFilePath;
             this.txtConfigText.Text = action.ConfigurationFileContents;
             if (action.ConfigurationFileId <= 0)
@@ -64,11 +57,10 @@ namespace Inedo.BuildMasterExtensions.Azure
         protected override AzureComputeActionBase PopulateProperties(AzureComputeActionBase Value)
         {
             var retVal = (AzureActionWithConfigBase)base.PopulateProperties(Value);
-            //retVal.ConfigurationFileName = this.txtConfigFileName.Text;
             retVal.ConfigurationFilePath = this.ffpConfigFilePath.Text;
             retVal.ConfigurationFileContents = this.txtConfigText.Text;
             retVal.ConfigurationFileId = String.IsNullOrEmpty(this.ddlConfigurationFile.SelectedValue) || "X" == this.ddlConfigurationFile.SelectedValue || !string.IsNullOrEmpty(this.txtConfigText.Text)
-                ? 0 
+                ? 0
                 : int.Parse(this.ddlConfigurationFile.SelectedValue);
             retVal.ConfigurationFileName = this.txtConfigurationFileName.Text;
             retVal.InstanceName = this.ddlInstance.SelectedValue;
@@ -79,13 +71,13 @@ namespace Inedo.BuildMasterExtensions.Azure
         {
             base.CreateChildControls();
             //ddlConfigurationFile
-            this.ddlConfigurationFile = new DropDownList {ID = "ddlConfigurationFile", Width = 300, AutoPostBack = true };
+            this.ddlConfigurationFile = new DropDownList { ID = "ddlConfigurationFile", Width = 300, AutoPostBack = true };
             this.ddlConfigurationFile.Items.Add(string.Empty);
-            this.ddlConfigurationFile.Items.AddRange(StoredProcs
-                .ConfigurationFiles_GetConfigurationFiles(this.ApplicationId, 0 == DeployableId ? null : (int?)DeployableId, "N")
+            this.ddlConfigurationFile.Items.AddRange(
+                StoredProcs.ConfigurationFiles_GetConfigurationFiles(Application_Id: this.ApplicationId, Deployable_Id: InedoLib.Util.NullIf(this.DeployableId, 0))
                     .Execute()
+                    .ConfigurationFiles_Extended
                     .Select(c => new ListItem { Text = c.FilePath_Text, Value = c.ConfigurationFile_Id.ToString() })
-                    .ToArray()
             );
             this.ddlConfigurationFile.Items.Add(new ListItem { Text = "Type name...", Value = "X", Enabled = false });
             this.ddlConfigurationFile.SelectedIndexChanged += this.ddlConfigurationFile_SelectedIndexChanged;
@@ -106,7 +98,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 new StandardFormField("Configuration File Location:", this.ffpConfigFilePath),
                 new StandardFormField("Configuration File:", this.ddlConfigurationFile),
                 ctl_txtConfigurationFileName,
-                ctl_ddlInstance 
+                ctl_ddlInstance
                 )
             );
         }
@@ -157,6 +149,5 @@ namespace Inedo.BuildMasterExtensions.Azure
                 }
             };
         }
- 
     }
 }

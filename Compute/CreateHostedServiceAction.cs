@@ -80,7 +80,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             StringBuilder body = new StringBuilder();
             body.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<CreateHostedService xmlns=\"http://schemas.microsoft.com/windowsazure\">");
             body.AppendFormat("<ServiceName>{0}</ServiceName>\r\n",this.ServiceName);
-            body.AppendFormat("<Label>{0}</Label>\r\n",this.Label.AsBase64());
+            body.AppendFormat("<Label>{0}</Label>\r\n", Base64Encode(this.Label));
             body.AppendFormat("<Description>{0}</Description>\r\n",this.Description);
             if(!string.IsNullOrEmpty(this.Location))
                 body.AppendFormat("<Location>{0}</Location>\r\n",this.Location);

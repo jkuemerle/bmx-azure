@@ -47,9 +47,11 @@
   <ItemGroup>
     <Reference Include="BuildMaster.Web.Controls">
       <HintPath>packages\Inedo.BuildMaster.SDK.4.5\lib\net40\BuildMaster.Web.Controls.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="BuildMasterCore">
       <HintPath>packages\Inedo.BuildMaster.SDK.4.5\lib\net40\BuildMasterCore.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
@@ -57,6 +59,7 @@
     </Reference>
     <Reference Include="InedoLib">
       <HintPath>packages\Inedo.BuildMaster.SDK.4.5\lib\net40\InedoLib.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Data.Edm, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

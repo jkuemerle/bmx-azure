@@ -1,10 +1,9 @@
-﻿using System.Text;
+﻿using System;
 using System.IO;
-
+using System.Text;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
-using System;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {

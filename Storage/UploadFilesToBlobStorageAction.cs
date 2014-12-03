@@ -18,13 +18,6 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
     [CustomEditor(typeof(UploadFilesToBlobStorageActionEditor))]
     public sealed class UploadFilesToBlobStorageAction : RemoteActionBase
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UploadFilesToBlobStorageAction"/> class.
-        /// </summary>
-        public UploadFilesToBlobStorageAction()
-        {
-        }
-
         [Persistent]
         public string AccountName { get; set; }
         [Persistent]
@@ -38,13 +31,19 @@ namespace Inedo.BuildMasterExtensions.Azure.Storage
         [Persistent]
         public string TargetFolder { get; set; }
 
-        public override string ToString()
+        public override ActionDescription GetActionDescription()
         {
-            return string.Format(
-                "Upload files matching ({0}) from {1} to {2}",
-                this.FileMasks != null ? string.Join(", ", this.FileMasks) : string.Empty,
-                string.IsNullOrEmpty(this.OverriddenSourceDirectory) ? "(default)" : this.OverriddenSourceDirectory,
-                this.Container + Util.ConcatNE("/", this.TargetFolder)
+            return new ActionDescription(
+                new ShortActionDescription(
+                    "Upload files matching ",
+                    new ListHilite(this.FileMasks ?? new string[0])
+                ),
+                new LongActionDescription(
+                    "from ",
+                    new DirectoryHilite(this.OverriddenSourceDirectory),
+                    " to ",
+                    new Hilite(this.Container + Util.ConcatNE("/", this.TargetFolder))
+                )
             );
         }
 

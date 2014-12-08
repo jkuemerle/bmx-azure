@@ -16,9 +16,19 @@ namespace Inedo.BuildMasterExtensions.Azure
         "Deploys a Cloud Service package onto Windows Azure.")]
     [Tag("windows-azure")]
     [CustomEditor(typeof(DeployPackageActionEditor))]
-    public class DeployPackageAction : AzureActionWithConfigBase  
+    public class DeployPackageAction : AzureActionWithConfigBase
     {
-        private Uri blobFileUri;
+        public DeployPackageAction()
+        {
+            this.UsesServiceName = true;
+            this.UsesSlotName = true;
+            this.UsesDeploymentName = true;
+            this.UsesTreatWarningsAsError = true;
+            this.UsesWaitForCompletion = true;
+            this.UsesExtendedProperties = true;
+            this.UsesExtensionConfiguration = true;
+            this.StartDeployment = true;
+        }
 
         [Persistent]
         public string PackageFile { get; set; }
@@ -44,74 +54,93 @@ namespace Inedo.BuildMasterExtensions.Azure
         [Persistent]
         public bool DeletePackageFromStorage { get; set; }
 
-        public override string ToString()
+        public override ActionDescription GetActionDescription()
         {
-            return string.Format("Deploying package to subscription {0}", this.Credentials.SubscriptionID);
-        }
-
-        public DeployPackageAction()
-        {
-            this.UsesServiceName = true;
-            this.UsesSlotName = true;
-            this.UsesDeploymentName = true;
-            this.UsesTreatWarningsAsError = true;
-            this.UsesWaitForCompletion = true;
-            this.UsesExtendedProperties = true;
-            this.UsesExtensionConfiguration = true;
-            this.StartDeployment = true;
-        }
-
-        internal string Test()
-        {
-            return this.ProcessRemoteCommand(null, null);
+            return new ActionDescription(
+                new ShortActionDescription(
+                    "Deploy ",
+                    !string.IsNullOrEmpty(this.PackageFile) ? (object)new DirectoryHilite(this.OverriddenSourceDirectory, this.PackageFile) : "package"
+                ),
+                new LongActionDescription(
+                    "to Azure subscription ",
+                    new Hilite(this.Credentials != null ? this.Credentials.SubscriptionID : string.Empty)
+                )
+            );
         }
 
         protected override void Execute()
         {
-            this.ExecuteRemoteCommand(null);
+            var blobUri = this.ExecuteRemoteCommand("upload");
+            if (string.IsNullOrEmpty(blobUri))
+                return;
+
+            var requestDocument = this.BuildRequestDocument(blobUri);
+
+            this.ExecuteRemoteCommand("request", requestDocument, blobUri);
         }
 
         protected override string ProcessRemoteCommand(string name, string[] args)
         {
-            if (!UploadPackage())
+            if (name == "upload")
             {
-                LogError("Error uploading package");
-                return null;
+                var blobUri = this.UploadPackage();
+                if (string.IsNullOrEmpty(blobUri))
+                {
+                    this.LogError("Error uploading package.");
+                    return null;
+                }
+
+                return blobUri;
             }
-            string requestID = string.Empty;
-            requestID = MakeRequest();
-            if (string.IsNullOrEmpty(requestID))
-                return null;
-            if (this.WaitForCompletion)
-                this.WaitForRequestCompletion(requestID);
-            if (this.DeletePackageFromStorage)
-                DeletePackage();
-            return requestID;
+            else if (name == "request")
+            {
+                var requestId = this.MakeRequest(args[0]);
+                if (string.IsNullOrEmpty(requestId))
+                    return null;
+
+                if (this.WaitForCompletion)
+                    this.WaitForRequestCompletion(requestId);
+
+                if (this.DeletePackageFromStorage)
+                    this.DeletePackage(args[1]);
+
+                return string.Empty;
+            }
+            else
+            {
+                throw new ArgumentException();
+            }
         }
 
-        internal string MakeRequest()
+        private string MakeRequest(string requestDocument)
         {
-            var resp = AzureRequest(RequestType.Post, BuildRequestDocument(),
+            var resp = this.AzureRequest(
+                RequestType.Post,
+                requestDocument,
                 "https://management.core.windows.net/{0}/services/hostedservices/{1}/deploymentslots/{2}",
-                this.ServiceName, this.SlotName.ToLowerInvariant());
-            if (HttpStatusCode.Accepted != resp.StatusCode)
+                Uri.EscapeUriString(this.ServiceName),
+                Uri.EscapeUriString(this.SlotName.ToLowerInvariant())
+            );
+
+            if (resp.StatusCode != HttpStatusCode.Accepted)
             {
-                LogError("Error deploying package to {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
+                this.LogError("Error deploying package to {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
                 return null;
             }
+
             return resp.Headers.Get("x-ms-request-id");
         }
 
-        internal string BuildRequestDocument()
+        private string BuildRequestDocument(string packageUrl)
         {
-            StringBuilder body = new StringBuilder();
+            var body = new StringBuilder();
             body.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<CreateDeployment xmlns=\"http://schemas.microsoft.com/windowsazure\">\r\n");
-            body.AppendFormat("<Name>{0}</Name>\r\n",this.DeploymentName);
-            body.AppendFormat("<PackageUrl>{0}</PackageUrl>",this.blobFileUri);
+            body.AppendFormat("<Name>{0}</Name>\r\n", this.DeploymentName);
+            body.AppendFormat("<PackageUrl>{0}</PackageUrl>", packageUrl);
             body.AppendFormat("<Label>{0}</Label>", Base64Encode(this.Label));
             body.AppendFormat("<Configuration>{0}</Configuration>", Base64Encode(this.GetConfigurationFileContents()));
-            body.AppendFormat("<StartDeployment>{0}</StartDeployment>",this.StartDeployment.ToString().ToLowerInvariant());
-            body.AppendFormat("<TreatWarningsAsError>{0}</TreatWarningsAsError>",this.TreatWarningsAsError.ToString().ToLowerInvariant());
+            body.AppendFormat("<StartDeployment>{0}</StartDeployment>", this.StartDeployment.ToString().ToLowerInvariant());
+            body.AppendFormat("<TreatWarningsAsError>{0}</TreatWarningsAsError>", this.TreatWarningsAsError.ToString().ToLowerInvariant());
             body.Append(ParseExtendedProperties());
             if (!string.IsNullOrEmpty(this.ExtensionConfiguration))
                 body.AppendFormat("<ExtensionConfiguration>{0}</ExtensionConfiguration>", this.ExtensionConfiguration);
@@ -119,13 +148,12 @@ namespace Inedo.BuildMasterExtensions.Azure
             return body.ToString();
         }
 
-        internal bool UploadPackage()
+        private string UploadPackage()
         {
             if (!string.IsNullOrEmpty(this.PackageFileStorageLocation))
             {
                 this.LogDebug("Using stored file at location {0}", this.PackageFileStorageLocation);
-                this.blobFileUri = new Uri(PackageFileStorageLocation);
-                return true;
+                return this.PackageFileStorageLocation;
             }
 
             try
@@ -140,8 +168,8 @@ namespace Inedo.BuildMasterExtensions.Azure
                 string package = this.ResolveDirectory(this.PackageFile);
                 if (!File.Exists(package))
                 {
-                    LogError("UploadPackage unable to locate package file at: {0}", package);
-                    return false;
+                    this.LogError("UploadPackage unable to locate package file at: {0}", package);
+                    return null;
                 }
                 string blobFileName = Path.GetFileNameWithoutExtension(package) + Guid.NewGuid().ToString() + (Path.HasExtension(package) ? Path.GetExtension(package) : "");
                 var blob = container.GetBlockBlobReference(blobFileName);
@@ -157,7 +185,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 {
                     this.LogInformation("Package {0} uploaded successfully.", package);
                 };
-                
+
                 var result = transfer.UploadBlobAsync(package);
 
                 int handled = WaitHandle.WaitAny(new[] { result.AsyncWaitHandle, this.Context.CancellationToken.WaitHandle });
@@ -166,40 +194,35 @@ namespace Inedo.BuildMasterExtensions.Azure
                     result.Cancel();
                     this.ThrowIfCanceledOrTimeoutExpired();
                 }
-                
-                this.blobFileUri = blob.Uri;
-                
-                return true;
+
+                return blob.Uri.ToString();
             }
             catch (Exception ex)
             {
-                LogError("UploadPackage error: {0}", ex.ToString());
-                return false;
+                this.LogError("UploadPackage error: {0}", ex.ToString());
+                return null;
             }
         }
 
-        internal bool DeletePackage()
+        private bool DeletePackage(string blobFileUrl)
         {
-            bool retVal = false;
             try
             {
                 var account = new CloudStorageAccount(new StorageCredentials(this.StorageAccountName, this.StorageAccessKey), true);
                 var blobClient = account.CreateCloudBlobClient();
                 var container = blobClient.GetContainerReference(BlobContainer);
                 container.CreateIfNotExists();
-                var blob = container.GetBlockBlobReference(this.blobFileUri.ToString());
-                if (null != blob)
-                {
+                var blob = container.GetBlockBlobReference(blobFileUrl);
+                if (blob != null)
                     blob.Delete();
-                }
+
                 return true;
             }
             catch (Exception ex)
             {
-                LogError("Delete Package error: {0}", ex.ToString());
-                retVal = false;
+                this.LogError("Delete Package error: {0}", ex.ToString());
+                return false;
             }
-            return retVal;
         }
     }
 }

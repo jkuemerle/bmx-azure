@@ -14,16 +14,16 @@ using Inedo.BuildMaster.Extensibility.Agents;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public abstract class AzureAction : RemoteActionBase  
+    public abstract class AzureAction : RemoteActionBase
     {
         internal protected enum RequestType { Get, Post, Delete };
 
         internal AzureConfigurer TestConfigurer { get; set; }
         protected static string OperationVersion = "2012-03-01";
         protected static XNamespace ns = "http://schemas.microsoft.com/windowsazure";
-        
+
         [Persistent]
-        public AzureAuthentication ActionCredentials {get;set;}
+        public AzureAuthentication ActionCredentials { get; set; }
 
         protected AzureConfigurer Configurer
         {
@@ -36,7 +36,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 else
                 {
                     var typ = typeof(AzureConfigurer);
-                    
+
                     var profiles = StoredProcs
                         .ExtensionConfiguration_GetConfigurations(typ.FullName + "," + typ.Assembly.GetName().Name)
                         .Execute();
@@ -44,7 +44,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                     var configurer =
                         profiles.FirstOrDefault(p => p.Default_Indicator.Equals(Domains.YN.Yes)) ?? profiles.FirstOrDefault();
 
-                    if (configurer == null) 
+                    if (configurer == null)
                         return null;
 
                     return (AzureConfigurer)Util.Persistence.DeserializeFromPersistedObjectXml(configurer.Extension_Configuration);
@@ -63,23 +63,14 @@ namespace Inedo.BuildMasterExtensions.Azure
             }
         }
 
-        protected string ResolveDirectory(string FilePath)
+        protected string ResolveDirectory(string filePath)
         {
-            using (var sourceAgent2 = Util.Agents.CreateLocalAgent())
-            {
-                var sourceAgent = sourceAgent2.GetService<IFileOperationsExecuter>();
-
-                char srcSeparator = sourceAgent.GetDirectorySeparator();
-                var srcPath = sourceAgent.GetWorkingDirectory(this.Context.ApplicationId, this.Context.DeployableId ?? 0, FilePath);
-
-                LogInformation("Source Path: " + srcPath);
-                return srcPath;
-            }
+            return Util.Path2.Combine(this.Context.SourceDirectory, filePath);
         }
 
         internal protected IDictionary<string, string> ListLocations()
         {
-            Dictionary<string,string> retVal = new Dictionary<string,string>();
+            Dictionary<string, string> retVal = new Dictionary<string, string>();
             var resp = AzureRequest(RequestType.Get, null, "https://management.core.windows.net/{0}/locations");
             if (HttpStatusCode.OK == resp.StatusCode)
             {

@@ -84,7 +84,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             return sb.ToString();
         }
 
-        protected IEnumerable<XElement> ParseExtendedProperties2(XNamespace ns)
+        protected IEnumerable<XElement> ParseExtendedProperties2()
         {
             if (string.IsNullOrEmpty(this.ExtendedProperties))
                 return Enumerable.Empty<XElement>();

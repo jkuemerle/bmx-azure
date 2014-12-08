@@ -6,6 +6,7 @@ using Inedo.BuildMaster;
 using Inedo.BuildMaster.ConfigurationFiles;
 using Inedo.BuildMaster.Data;
 using Inedo.BuildMaster.Extensibility;
+using Inedo.BuildMaster.Extensibility.Agents;
 using Inedo.BuildMaster.Extensibility.Variables;
 
 namespace Inedo.BuildMasterExtensions.Azure
@@ -34,22 +35,24 @@ namespace Inedo.BuildMasterExtensions.Azure
 
             if (!string.IsNullOrEmpty(this.ConfigurationFilePath))
             {
-                string configFile = this.ResolveDirectory(this.ConfigurationFilePath);
-                if (!File.Exists(configFile))
+                var configFile = this.ResolveDirectory(this.ConfigurationFilePath);
+                var fileOps = this.Context.Agent.GetService<IFileOperationsExecuter>();
+
+                if (!fileOps.FileExists(configFile))
                 {
-                    LogError("Configuration file {0} does not exist.", configFile);
+                    this.LogError("Configuration file {0} does not exist.", configFile);
                     return null;
                 }
 
-                if (null != this.TestConfigurer)
-                    return File.ReadAllText(configFile);
+                if (this.TestConfigurer != null)
+                    return fileOps.ReadAllText(configFile);
 
                 var tree = VariableExpressionTree.Parse(configFile, Domains.VariableSupportCodes.All);
                 var variableContext = (IVariableEvaluationContext)Activator.CreateInstance(Type.GetType("Inedo.BuildMaster.Variables.StandardVariableEvaluationContext,BuildMaster"), (IGenericBuildMasterContext)this.Context, this.Context.Variables);
                 return tree.Evaluate(variableContext);
             }
 
-            return GetConfigText(this.ConfigurationFileId, this.InstanceName);
+            return this.GetConfigText(this.ConfigurationFileId, this.InstanceName);
         }
 
         protected virtual byte[] GetConfigurationFileContents(int configurationFileId, string instanceName, int? versionNumber)
@@ -84,7 +87,7 @@ namespace Inedo.BuildMasterExtensions.Azure
                 .ReleaseConfigurationFiles
                 .FirstOrDefault(r => r.ConfigurationFile_Id == configurationFileId);
             
-            var file = GetConfigurationFileContents(configurationFileId, instanceName, version != null ? (int?)version.Version_Number : null);
+            var file = this.GetConfigurationFileContents(configurationFileId, instanceName, version != null ? (int?)version.Version_Number : null);
             if (file == null)
                 return null;
 

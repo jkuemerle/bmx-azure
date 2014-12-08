@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Net;
-using System.IO;
-using Microsoft.WindowsAzure;
+using System.Xml.Linq;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
-using System.Xml.Linq;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
@@ -19,12 +14,6 @@ namespace Inedo.BuildMasterExtensions.Azure
     [CustomEditor(typeof(ChangeDeploymentConfigurationActionEditor))]
     public class ChangeDeploymentConfigurationAction : AzureActionWithConfigBase  
     {
-        public enum ChangeModeType { Auto, Manual };
-
-
-        [Persistent]
-        public ChangeModeType Mode { get; set; }
-
         public ChangeDeploymentConfigurationAction()
         {
             this.UsesServiceName = true;
@@ -36,17 +25,16 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.UsesExtensionConfiguration = true;
         }
 
+        public enum ChangeModeType { Auto, Manual };
+
+        [Persistent]
+        public ChangeModeType Mode { get; set; }
 
         public override string ToString()
         {
             return string.Format("Changing {0} deployment configuration for {0}", 
                 (string.IsNullOrEmpty(this.DeploymentName) ? this.SlotName : this.DeploymentName),
                 this.ServiceName);
-        }
-
-        internal string Test()
-        {
-            return this.ProcessRemoteCommand(null, null);
         }
 
         protected override void Execute()
@@ -88,13 +76,12 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         private string BuildRequestDocument()
         {
-            var ns = XNamespace.Get("http://schemas.microsoft.com/windowsazure");
             return new XDocument(
                 new XElement(ns + "ChangeConfiguration",
                     new XElement(ns + "Configuration", Base64Encode(this.GetConfigurationFileContents())),
                     new XElement(ns + "TreatWarningsAsError", this.TreatWarningsAsError.ToString().ToLowerInvariant()),
                     new XElement(ns + "Mode", this.Mode),
-                    this.ParseExtendedProperties2(ns),
+                    this.ParseExtendedProperties2(),
                     !string.IsNullOrEmpty(this.ExtensionConfiguration) ? (object)new XElement(ns + "ExtensionConfiguration", this.ExtensionConfiguration) : Enumerable.Empty<XElement>()
                 )
             ).ToString(SaveOptions.DisableFormatting);

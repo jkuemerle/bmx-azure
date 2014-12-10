@@ -70,7 +70,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             {
                 var writer = new StreamWriter(memoryStream, new UTF8Encoding(false));
                 deployer.LogReceived += (s, e) => this.Log(e.LogLevel, e.Message);
-                if (!deployer.Write((IGenericBuildMasterContext)this.Context, writer))
+                if (!deployer.Write(new SimpleBuildMasterContext(this.Context), writer))
                     return null;
 
                 writer.Flush();

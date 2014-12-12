@@ -18,6 +18,11 @@ namespace Inedo.BuildMasterExtensions.Azure
     {
         internal protected enum RequestType { Get, Post, Delete };
 
+        public AzureAction()
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls;
+        }
+
         internal AzureConfigurer TestConfigurer { get; set; }
         protected static string OperationVersion = "2012-03-01";
         protected static XNamespace ns = "http://schemas.microsoft.com/windowsazure";

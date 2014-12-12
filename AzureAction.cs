@@ -18,11 +18,6 @@ namespace Inedo.BuildMasterExtensions.Azure
     {
         internal protected enum RequestType { Get, Post, Delete };
 
-        public AzureAction()
-        {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls;
-        }
-
         internal AzureConfigurer TestConfigurer { get; set; }
         protected static string OperationVersion = "2012-03-01";
         protected static XNamespace ns = "http://schemas.microsoft.com/windowsazure";
@@ -132,10 +127,9 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         internal AzureResponse AzureRequest(RequestType requestType, string payload, string uriFormat, params object[] args)
         {
-            this.LogDebug("Sending Azure API request of type {0}...", requestType);
-
             var azureResponse = new AzureResponse();
             var uri = new Uri(string.Format(uriFormat, new object[] { this.Credentials.SubscriptionID }.Concat(args).ToArray()));
+            this.LogDebug("Sending Azure API {0} request to \"{1}\"...", requestType.ToString().ToUpper(), uri);
             var req = (HttpWebRequest)HttpWebRequest.Create(uri);
             if (requestType == RequestType.Post)
                 req.Method = "POST";

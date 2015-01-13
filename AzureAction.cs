@@ -65,7 +65,14 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         protected string ResolveDirectory(string filePath)
         {
-            return Util.Path2.Combine(this.Context.SourceDirectory, filePath);
+            using (var agent = Util.Agents.CreateLocalAgent())
+            {
+                var fileOps = agent.GetService<IFileOperationsExecuter>();
+                var directory = fileOps.GetWorkingDirectory(this.Context.ApplicationId, this.Context.DeployableId ?? 0, filePath);
+
+                this.LogDebug("Resolved directory: " + directory);
+                return directory;
+            }
         }
 
         internal protected IDictionary<string, string> ListLocations()

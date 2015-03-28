@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.IO;
-
 using Inedo.BuildMaster;
-using Inedo.BuildMaster.Extensibility.Actions;
-using Inedo.BuildMaster.Web;
+using Inedo.BuildMaster.ConfigurationFiles;
 using Inedo.BuildMaster.Data;
-using Inedo.BuildMaster.Features;
-//using Inedo.Linq;
+using Inedo.BuildMaster.Extensibility;
+using Inedo.BuildMaster.Extensibility.Agents;
+using Inedo.BuildMaster.Extensibility.Variables;
 
 namespace Inedo.BuildMasterExtensions.Azure
 {
-    public abstract class AzureActionWithConfigBase : AzureComputeActionBase 
+    public abstract class AzureActionWithConfigBase : AzureComputeActionBase
     {
         [Persistent]
         public string ConfigurationFilePath { get; set; }
@@ -29,69 +27,74 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         [Persistent]
         public string InstanceName { get; set; }
-        
+
         protected string GetConfigurationFileContents()
         {
             if (!string.IsNullOrEmpty(this.ConfigurationFileContents))
                 return this.ConfigurationFileContents;
+
             if (!string.IsNullOrEmpty(this.ConfigurationFilePath))
             {
-                string configFile = this.ResolveDirectory(this.ConfigurationFilePath);
-                if (!File.Exists(configFile))
+                var configFileDir = this.ResolveDirectory(this.ConfigurationFilePath);
+                var configFile = Util.Path2.Combine(configFileDir, this.ConfigurationFileName);
+
+                var fileOps = this.Context.Agent.GetService<IFileOperationsExecuter>();
+
+                if (!fileOps.FileExists(configFile))
                 {
-                    LogError("Configuration file {0} does not exist.", configFile);
+                    this.LogError("Configuration file {0} does not exist.", configFile);
                     return null;
                 }
-                if (null != this.TestConfigurer)
-                    return File.ReadAllText(configFile);
-                return File.ReadAllText(configFile).Substitute(Context.Variables);
+
+                if (this.TestConfigurer != null)
+                    return fileOps.ReadAllText(configFile);
+
+                var tree = VariableExpressionTree.Parse(configFile, Domains.VariableSupportCodes.All);
+                var variableContext = (IVariableEvaluationContext)Activator.CreateInstance(Type.GetType("Inedo.BuildMaster.Variables.StandardVariableEvaluationContext,BuildMaster"), (IGenericBuildMasterContext)this.Context, this.Context.Variables);
+                return tree.Evaluate(variableContext);
             }
-            return GetConfigText(this.ConfigurationFileId,this.InstanceName);
+
+            return this.GetConfigText(this.ConfigurationFileId, this.InstanceName);
         }
 
-        private string GetConfigText(int configID, string instanceName)
+        protected virtual byte[] GetConfigurationFileContents(int configurationFileId, string instanceName, int? versionNumber)
         {
-            var file = StoredProcs.ConfigurationFiles_GetConfigurationFileVersions(configID, this.Context.ApplicationId, null, null, instanceName, 1).Execute().FirstOrDefault();
-            if (null == file)
-                return null;
-            if (0 == file.File_Bytes.Length)
-            {
-                this.LogError("Configuration for file {0} in {1} is empty.", configID, instanceName);
-                return null;
-            }
-            LogInformation("Return config.");
-            return Encoding.Default.GetString(file.File_Bytes).Substitute(Context.Variables);
-        }
-
-        private string GetConfigText(string configName)
-        {
-            var config = (from r in Inedo.BuildMaster.Data.StoredProcs.ConfigurationFiles_GetConfigurationFiles(this.Context.ApplicationId, this.Context.DeployableId, "N").Execute() where r.FilePath_Text.Trim().ToLowerInvariant() == configName.Trim().ToLowerInvariant() select r).FirstOrDefault();
-            if (null == config)
-            {
-                LogError("Unable to GetConfigurationFiles {0}, {1}, N for FilePath_Text = \"{2}\"", this.Context.ApplicationId, this.Context.DeployableId, configName);
-                return null;
-            }
-            else
-            {
-                // get the latest config file version
-                var file = (from v in Inedo.BuildMaster.Data.StoredProcs.ConfigurationFiles_GetConfigurationFileVersions(config.ConfigurationFile_Id, this.Context.ApplicationId, null, null, null, 1).Execute() select v).FirstOrDefault();
-                if (null == file)
+            var deployer = new ConfigurationFileDeployer(
+                new ConfigurationFileDeploymentOptions
                 {
-                    this.LogError("Unable to find an active configuration for the application id: {0} and deployable id: {1}", this.Context.ApplicationId, this.Context.DeployableId);
+                    ConfigurationFileId = configurationFileId,
+                    InstanceName = instanceName,
+                    VersionNumber = versionNumber
+                }
+            );
+
+            using (var memoryStream = new MemoryStream())
+            {
+                var writer = new StreamWriter(memoryStream, new UTF8Encoding(false));
+                deployer.LogReceived += (s, e) => this.Log(e.LogLevel, e.Message);
+                if (!deployer.Write((IGenericBuildMasterContext)this.Context, writer))
                     return null;
-                }
-                else
-                {
-                    if (0 == file.File_Bytes.Length)
-                    {
-                        this.LogError("Configuration for {0} is empty.", configName);
-                        return null;
-                    }
-                    LogInformation("Return config.");
-                    return Encoding.Default.GetString(file.File_Bytes).Substitute(Context.Variables);
-                }
+
+                writer.Flush();
+                return memoryStream.ToArray();
             }
         }
 
+        private string GetConfigText(int configurationFileId, string instanceName)
+        {
+            this.LogDebug("Loading configuration file instance {0}...", instanceName);
+
+            var version = StoredProcs.Releases_GetRelease(this.Context.ApplicationId, this.Context.ReleaseNumber)
+                .Execute()
+                .ReleaseConfigurationFiles
+                .FirstOrDefault(r => r.ConfigurationFile_Id == configurationFileId);
+            
+            var file = this.GetConfigurationFileContents(configurationFileId, instanceName, version != null ? (int?)version.Version_Number : null);
+            if (file == null)
+                return null;
+
+            this.LogDebug("Configuration file found.");
+            return Encoding.UTF8.GetString(file);
+        }
     }
 }

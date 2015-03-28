@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Inedo.BuildMasterExtensions.Azure
@@ -50,8 +46,8 @@ namespace Inedo.BuildMasterExtensions.Azure
                 store.Open(OpenFlags.ReadOnly);
                 var certs = store.Certificates.Find(X509FindType.FindBySubjectName, Name, false);
                 store.Close();
-                if(0 == certs.Count)
-                    throw new Exception(string.Format("Cannot find certificate named {0} in machine store",Name));
+                if (0 == certs.Count)
+                    throw new Exception(string.Format("Cannot find certificate named {0} in machine store", Name));
                 return certs[0];
             }
             catch (Exception)
@@ -64,7 +60,5 @@ namespace Inedo.BuildMasterExtensions.Azure
         {
             throw new NotImplementedException();
         }
-
-
     }
 }

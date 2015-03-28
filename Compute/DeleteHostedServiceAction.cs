@@ -13,8 +13,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Delete Hosted Service",
-        "Deletes a cloud service in Windows Azure.",
-        "Windows Azure")]
+        "Deletes a cloud service in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(DeleteHostedServiceActionEditor))]
     public class DeleteHostedServiceAction : AzureComputeActionBase 
     {
@@ -55,7 +55,7 @@ namespace Inedo.BuildMasterExtensions.Azure
             var resp = AzureRequest(RequestType.Delete, null, "https://management.core.windows.net/{0}/services/hostedservices/{1}",this.ServiceName);
             if (HttpStatusCode.OK != resp.StatusCode)
             {
-                LogError("Error deleting Hosted Service named {0}. Error code is: {1}, error description: {1}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
+                LogError("Error deleting Hosted Service named {0}. Error code is: {1}, error description: {2}", this.ServiceName, resp.ErrorCode, resp.ErrorMessage);
                 return null;
             }
             return resp.Headers.Get("x-ms-request-id");

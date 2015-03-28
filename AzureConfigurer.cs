@@ -1,5 +1,4 @@
-﻿
-using Inedo.BuildMaster;
+﻿using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Configurers.Extension;
 using Inedo.BuildMaster.Web;
 
@@ -10,6 +9,12 @@ namespace Inedo.BuildMasterExtensions.Azure
     [CustomEditor(typeof(AzureConfigurerEditor))]
     public sealed class AzureConfigurer : ExtensionConfigurerBase 
     {
+        public AzureConfigurer()
+        {
+            this.ServerID = 1;
+            this.Credentials = new AzureAuthentication();
+        }
+
         [Persistent]
         public string AzureSDKPath { get; set; }
 
@@ -17,13 +22,7 @@ namespace Inedo.BuildMasterExtensions.Azure
         public int ServerID { get; set; }
 
         [Persistent]
-        public AzureAuthentication Credentials{ get; set; }
-
-        public AzureConfigurer()
-        {
-            this.ServerID = 1;
-            this.Credentials = new AzureAuthentication();
-        }
+        public AzureAuthentication Credentials { get; set; }
 
         public override string ToString()
         {

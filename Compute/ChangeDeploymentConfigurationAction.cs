@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Net;
-using System.IO;
-
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
-
+using System.Xml.Linq;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
@@ -16,17 +9,11 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Change Deployment Configuration",
-        "Updates the configuration of a deployment in Windows Azure.",
-        "Windows Azure")]
+        "Updates the configuration of a deployment in Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(ChangeDeploymentConfigurationActionEditor))]
     public class ChangeDeploymentConfigurationAction : AzureActionWithConfigBase  
     {
-        public enum ChangeModeType { Auto, Manual };
-
-
-        [Persistent]
-        public ChangeModeType Mode { get; set; }
-
         public ChangeDeploymentConfigurationAction()
         {
             this.UsesServiceName = true;
@@ -38,17 +25,16 @@ namespace Inedo.BuildMasterExtensions.Azure
             this.UsesExtensionConfiguration = true;
         }
 
+        public enum ChangeModeType { Auto, Manual };
+
+        [Persistent]
+        public ChangeModeType Mode { get; set; }
 
         public override string ToString()
         {
             return string.Format("Changing {0} deployment configuration for {0}", 
                 (string.IsNullOrEmpty(this.DeploymentName) ? this.SlotName : this.DeploymentName),
                 this.ServiceName);
-        }
-
-        internal string Test()
-        {
-            return this.ProcessRemoteCommand(null, null);
         }
 
         protected override void Execute()
@@ -88,19 +74,17 @@ namespace Inedo.BuildMasterExtensions.Azure
             return resp.Headers.Get("x-ms-request-id");
         }
 
-        internal string BuildRequestDocument()
+        private string BuildRequestDocument()
         {
-            StringBuilder body = new StringBuilder();
-            body.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<ChangeConfiguration xmlns=\"http://schemas.microsoft.com/windowsazure\">\r\n");
-            body.AppendFormat("<Configuration>{0}</Configuration>",this.GetConfigurationFileContents().AsBase64());
-            body.AppendFormat("<TreatWarningsAsError>{0}</TreatWarningsAsError>",this.TreatWarningsAsError.ToString().ToLowerInvariant());
-            body.AppendFormat("<Mode>{0}</Mode>", this.Mode);
-            body.Append(ParseExtendedProperties());
-            if (!string.IsNullOrEmpty(this.ExtensionConfiguration))
-                body.AppendFormat("<ExtensionConfiguration>{0}</ExtensionConfiguration>", this.ExtensionConfiguration);
-            body.Append("</ChangeConfiguration>\r\n");
-            return body.ToString();
+            return new XDocument(
+                new XElement(ns + "ChangeConfiguration",
+                    new XElement(ns + "Configuration", Base64Encode(this.GetConfigurationFileContents())),
+                    new XElement(ns + "TreatWarningsAsError", this.TreatWarningsAsError.ToString().ToLowerInvariant()),
+                    new XElement(ns + "Mode", this.Mode),
+                    this.ParseExtendedProperties2(),
+                    !string.IsNullOrEmpty(this.ExtensionConfiguration) ? (object)new XElement(ns + "ExtensionConfiguration", this.ExtensionConfiguration) : Enumerable.Empty<XElement>()
+                )
+            ).ToString(SaveOptions.DisableFormatting);
         }
-
     }
 }

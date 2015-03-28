@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System;
 using System.IO;
-
+using System.Text;
 using Inedo.BuildMaster;
 using Inedo.BuildMaster.Extensibility.Actions;
 using Inedo.BuildMaster.Web;
@@ -9,8 +9,8 @@ namespace Inedo.BuildMasterExtensions.Azure
 {
     [ActionProperties(
         "Package Application",
-        "Packages Web and Worker Role applications for deployment onto Windows Azure.",
-        "Windows Azure")]
+        "Packages Web and Worker Role applications for deployment onto Windows Azure.")]
+    [Tag("windows-azure")]
     [CustomEditor(typeof(PackageActionEditor))]
     public sealed class PackageAction : AzureAction 
     {
@@ -41,29 +41,14 @@ namespace Inedo.BuildMasterExtensions.Azure
         [Persistent]
         public string RolePropertiesFileRoleName { get; set; }
 
+        [Persistent]
+        public string AdditionalArguments { get; set; }
+
         public PackageAction()
         {
             this.WebRole = new AzureRole();
             this.WorkerRole = new AzureRole();
             this.WebRoleSite = new AzureSite();
-        }
-
-        /// <summary>
-        /// Returns a value indicating whether the extension's configurer currently needs to be
-        /// configured.
-        /// </summary>
-        /// <returns>
-        /// True if configurer requires configuration; otherwise false.
-        /// </returns>
-        /// <remarks>
-        /// Unless overridden by an action, this method always returns false.
-        /// </remarks>
-        public override bool IsConfigurerSettingRequired()
-        {
-            if (null != this.Configurer)
-                return string.IsNullOrEmpty(this.Configurer.AzureSDKPath);
-            else
-                return true;
         }
 
         public override string ToString()
@@ -83,17 +68,15 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         protected override string ProcessRemoteCommand(string name, string[] args)
         {
-            string workingDir = ".";
-            if (null != RemoteConfiguration)
-                workingDir = RemoteConfiguration.SourceDirectory;
+            string workingDir = this.Context.SourceDirectory;
             string cmdLine = BuildCommand();
             string p = BuildParameters();
             LogInformation("Ready to run command line {0} with parameters {1}", cmdLine, p);
-            string exitcode = ExecuteCommandLine(cmdLine, p, workingDir);
+            int exitcode = ExecuteCommandLine(cmdLine, p, workingDir);
             LogInformation("Result of command line: {0}", exitcode);
-            if(0 != int.Parse(exitcode)) 
+            if(0 != exitcode) 
                 LogError("Error creating Azure package. Error Code: {0}",exitcode);
-            return exitcode;
+            return exitcode.ToString();
         }
 
         internal string ParseServiceDefinition(string PathToParse)
@@ -111,6 +94,9 @@ namespace Inedo.BuildMasterExtensions.Azure
 
         internal string BuildCommand()
         {
+            if (string.IsNullOrEmpty(this.Configurer.AzureSDKPath))
+                throw new InvalidOperationException("Could not find the Azure SDK path. Update the Azure extension configuration to include this path.");
+
             return Path.Combine(this.Configurer.AzureSDKPath, "cspack.exe");
         }
 
@@ -146,6 +132,9 @@ namespace Inedo.BuildMasterExtensions.Azure
                     Directory.CreateDirectory(outputDir);
                 p.AppendFormat(" /out:{0}", output);
             }
+            if (!string.IsNullOrEmpty(this.AdditionalArguments))
+                p.Append(" " + this.AdditionalArguments);
+
             return p.ToString();
         }
     }
